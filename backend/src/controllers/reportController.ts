@@ -182,3 +182,115 @@ export const getEmployeeReport = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to generate employee report' })
   }
 }
+
+export const getRevenueByDay = async (req: Request, res: Response) => {
+  const { startDate, endDate } = req.query
+  try {
+    const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const end = endDate ? new Date(endDate as string) : new Date()
+    end.setHours(23, 59, 59, 999)
+
+    const invoices = await prisma.invoice.findMany({
+      where: { createdAt: { gte: start, lte: end }, status: 'paid' },
+      select: { createdAt: true, finalAmount: true }
+    })
+
+    // Group by date
+    const map = new Map<string, number>()
+    invoices.forEach(inv => {
+      const key = inv.createdAt.toISOString().slice(0, 10)
+      map.set(key, (map.get(key) || 0) + inv.finalAmount)
+    })
+
+    // Fill all dates in range
+    const result: { date: string; revenue: number }[] = []
+    const cur = new Date(start)
+    while (cur <= end) {
+      const key = cur.toISOString().slice(0, 10)
+      result.push({ date: key, revenue: map.get(key) || 0 })
+      cur.setDate(cur.getDate() + 1)
+    }
+
+    res.json(result)
+  } catch {
+    res.status(500).json({ error: 'Failed' })
+  }
+}
+
+// Top 5 bàn doanh thu cao nhất
+export const getTopTables = async (req: Request, res: Response) => {
+  const { startDate, endDate } = req.query
+  try {
+    const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const end = endDate ? new Date(endDate as string) : new Date()
+
+    const invoices = await prisma.invoice.findMany({
+      where: { createdAt: { gte: start, lte: end }, status: 'paid' },
+      include: { session: { include: { table: true } } }
+    })
+
+    const tableMap = new Map<number, { name: string; revenue: number; count: number }>()
+    invoices.forEach(inv => {
+      const t = inv.session.table
+      const ex = tableMap.get(t.id) || { name: t.name, revenue: 0, count: 0 }
+      ex.revenue += inv.finalAmount
+      ex.count += 1
+      tableMap.set(t.id, ex)
+    })
+
+    const top5 = Array.from(tableMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+
+    res.json(top5)
+  } catch {
+    res.status(500).json({ error: 'Failed' })
+  }
+}
+
+// Giờ cao điểm
+export const getPeakHours = async (req: Request, res: Response) => {
+  const { startDate, endDate } = req.query
+  try {
+    const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const end = endDate ? new Date(endDate as string) : new Date()
+
+    const invoices = await prisma.invoice.findMany({
+      where: { createdAt: { gte: start, lte: end }, status: 'paid' },
+      select: { createdAt: true, finalAmount: true }
+    })
+
+    const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, revenue: 0, count: 0 }))
+    invoices.forEach(inv => {
+      const h = inv.createdAt.getHours()
+      hours[h].revenue += inv.finalAmount
+      hours[h].count += 1
+    })
+
+    res.json(hours)
+  } catch {
+    res.status(500).json({ error: 'Failed' })
+  }
+}
+
+// Danh sách hóa đơn theo ngày (có filter)
+export const getInvoicesByDate = async (req: Request, res: Response) => {
+  const { startDate, endDate } = req.query
+  try {
+    const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const end = endDate ? new Date(endDate as string) : new Date()
+    end.setHours(23, 59, 59, 999)
+
+    const invoices = await prisma.invoice.findMany({
+      where: { createdAt: { gte: start, lte: end } },
+      include: {
+        session: { include: { table: true } },
+        createdBy: { select: { username: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+    res.json(invoices)
+  } catch {
+    res.status(500).json({ error: 'Failed' })
+  }
+}

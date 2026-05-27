@@ -14,6 +14,9 @@ import customerRoutes from './routes/customerRoutes'
 import promotionRoutes from './routes/promotionRoutes'
 import reportRoutes from './routes/reportRoutes'
 
+import inventoryRoutes from './routes/inventoryRoutes'
+import userRoutes from './routes/userRoutes'
+
 
 dotenv.config()
 
@@ -63,6 +66,8 @@ app.use('/api/bank', bankRoutes)
 app.use('/api/customers', customerRoutes)
 app.use('/api/promotions', promotionRoutes)
 app.use('/api/reports', reportRoutes)
+app.use('/api/inventory', inventoryRoutes)
+app.use('/api/users', userRoutes)
 
 app.get('/', (req, res) => {
     res.json({ message: '99Billiards API is running!' })
