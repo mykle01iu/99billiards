@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  username     String     @unique
+  passwordHash String
+  role         String     @default("staff")
+  createdAt    DateTime   @default(now())
+  employee     Employee?
+  invoices     Invoice[]
+}
+
+model Employee {
+  id          Int      @id @default(autoincrement())
+  userId      Int?     @unique
+  user        User?    @relation(fields: [userId], references: [id])
+  fullName    String
+  phone       String?
+  position    String
+  baseSalary  Float    @default(0)
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  shifts      Shift[]
+}
+
+model Shift {
+  id         Int       @id @default(autoincrement())
+  employeeId Int
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  clockIn    DateTime
+  clockOut   DateTime?
+  note       String?
+}
+
+model Table {
+  id           Int       @id @default(autoincrement())
+  name         String
+  type         String    @default("standard")
+  status       String    @default("available")
+  pricePerHour Float
+  sessions     Session[]
+}
+
+model Session {
+  id         Int       @id @default(autoincrement())
+  tableId    Int
+  table      Table     @relation(fields: [tableId], references: [id])
+  startTime  DateTime  @default(now())
+  endTime    DateTime?
+  totalHours Float?
+  tableFee   Float?
+  invoice    Invoice?
+}
+
+model Service {
+  id           Int           @id @default(autoincrement())
+  name         String
+  category     String
+  price        Float
+  stock        Int           @default(0)
+  invoiceItems InvoiceItem[]
+}
+
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  sessionId     Int           @unique
+  session       Session       @relation(fields: [sessionId], references: [id])
+  createdById   Int
+  createdBy     User          @relation(fields: [createdById], references: [id])
+  customerId    Int?
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  totalAmount   Float         @default(0)
+  discountAmount Float        @default(0)
+  finalAmount   Float         @default(0)
+  paymentMethod String        @default("cash")
+  promotionCode String?
+  status        String        @default("pending")
+  createdAt     DateTime      @default(now())
+  items         InvoiceItem[]
+}
+
+model InvoiceItem {
+  id        Int     @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id])
+  quantity  Int
+  unitPrice Float
+}
+
+model BankAccount {
+  id           Int     @id @default(autoincrement())
+  bankName     String
+  accountName  String
+  accountNumber String
+  isDefault    Boolean @default(true)
+}
+
+model Customer {
+  id          Int       @id @default(autoincrement())
+  name        String
+  phone       String    @unique
+  tier        String    @default("normal")
+  totalSpent  Float     @default(0)
+  points      Int       @default(0)
+  invoices    Invoice[]
+  createdAt   DateTime  @default(now())
+}
+
+model Promotion {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique
+  description   String
+  discountType  String
+  discountValue Float
+  minAmount     Float     @default(0)
+  maxUsage      Int       @default(999)
+  used          Int       @default(0)
+  active        Boolean   @default(true)
+  expireAt      DateTime?
+  createdAt     DateTime  @default(now())
+}
