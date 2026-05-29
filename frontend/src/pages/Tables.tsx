@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
 import api from '../services/api'
-import QRPayment from '../components/QRPayment'
 
 interface Table { id: number; name: string; type: string; status: string; pricePerHour: number }
 interface Session { id: number; tableId: number; startTime: string; table: Table }
@@ -26,18 +25,26 @@ export default function Tables() {
   }, [])
 
   const fetchData = useCallback(async () => {
-    const [t, s, sv] = await Promise.all([api.get('/tables'), api.get('/tables/active-sessions'), api.get('/services')])
-    setTables(t.data); setSessions(s.data); setServices(sv.data)
+    try {
+      const [t, s, sv] = await Promise.all([api.get('/tables'), api.get('/tables/active-sessions'), api.get('/services')])
+      setTables(t.data); setSessions(s.data); setServices(sv.data)
+    } catch (error) {
+      console.error('Lỗi tải dữ liệu:', error)
+    }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(fetchData, 3000)
+    return () => clearInterval(interval)
+  }, [fetchData])
 
   const getSession = (tableId: number) => sessions.find(s => s.tableId === tableId)
 
   const getElapsed = (startTime: string) => {
     const diff = now.getTime() - new Date(startTime).getTime()
     const h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000)
-    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
 
   const getEstimatedFee = (startTime: string, pricePerHour: number) => {
@@ -45,7 +52,14 @@ export default function Tables() {
     return Math.round(hours * pricePerHour)
   }
 
-  const handleStart = async (id: number) => { await api.post(`/tables/${id}/start`); fetchData() }
+  const handleStart = async (id: number) => {
+    try {
+      await api.post(`/tables/${id}/start`)
+      fetchData()
+    } catch (error: any) {
+      alert('❌ ' + (error.response?.data?.message || 'Không thể bắt đầu ca chơi'))
+    }
+  }
 
   const openInvoiceModal = (table: Table) => {
     const session = getSession(table.id)
@@ -74,6 +88,10 @@ export default function Tables() {
     return getEstimatedFee(selectedSession.startTime, selectedTable.pricePerHour) + orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
   }
 
+  const getQRUrl = (amount: number) => {
+    return `https://img.vietqr.io/image/MB-69999888888866-qr_only.png?amount=${amount}&addInfo=99Billiards thanh toan ban&accountName=HOANG DINH KHAI`
+  }
+
   const handleCheckout = async () => {
     if (!selectedSession) return
     try {
@@ -82,14 +100,31 @@ export default function Tables() {
         sessionId: selectedSession.id, paymentMethod,
         items: orderItems.map(i => ({ serviceId: i.serviceId, quantity: i.quantity, unitPrice: i.price }))
       })
-      setInvoiceModal(false); fetchData(); alert('✅ Thanh toán thành công!')
-    } catch { alert('❌ Có lỗi xảy ra!') }
+      alert('✅ Thanh toán thành công!')
+      setInvoiceModal(false)
+      setOrderItems([])
+      setPaymentMethod('cash')
+      fetchData()
+    } catch (error: any) {
+      alert('❌ ' + (error.response?.data?.message || error.message || 'Có lỗi xảy ra'))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await api.post('/tables', form)
-    setForm({ name: '', type: 'standard', pricePerHour: '' }); setShowForm(false); fetchData()
+    if (!form.name || !form.pricePerHour) {
+      alert('❌ Vui lòng điền đầy đủ thông tin')
+      return
+    }
+    try {
+      await api.post('/tables', form)
+      setForm({ name: '', type: 'standard', pricePerHour: '' })
+      setShowForm(false)
+      fetchData()
+      alert('✅ Thêm bàn thành công!')
+    } catch (error: any) {
+      alert('❌ ' + (error.response?.data?.message || 'Không thể thêm bàn'))
+    }
   }
 
   const categoryLabel: Record<string, string> = { food: '🍔', drink: '🥤', equipment: '🎱' }
@@ -221,7 +256,19 @@ export default function Tables() {
                     </button>
                   ))}
                 </div>
-                <QRPayment amount={getTotalBill()} paymentMethod={paymentMethod} />
+                {paymentMethod === 'transfer' && (
+                  <div className="p-4 rounded-xl border-2 text-center" style={{ borderColor: '#f5c518' }}>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Quét QR để thanh toán</p>
+                    <img
+                      src={getQRUrl(getTotalBill())}
+                      alt="QR thanh toán"
+                      className="w-48 h-48 mx-auto rounded-xl"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">MB Bank • HOANG DINH KHAI</p>
+                    <p className="text-xs text-gray-500">69999888888866</p>
+                    <p className="font-bold mt-1" style={{ color: '#1a5c2e' }}>{getTotalBill().toLocaleString()}đ</p>
+                  </div>
+                )}
                 <button onClick={handleCheckout} className="w-full py-3 rounded-xl font-bold text-sm" style={{ background: '#f5c518', color: '#1a3d1f' }}>✅ Xác nhận thanh toán</button>
               </div>
             </div>

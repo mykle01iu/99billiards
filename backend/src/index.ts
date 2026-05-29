@@ -40,9 +40,9 @@ async function seedDefaultUsers() {
     if (!bank) {
         await prisma.bankAccount.create({
             data: {
-                bankName: 'Vietcombank',
-                accountName: '99 BILLIARDS',
-                accountNumber: '1234567890',
+                bankName: 'MBBank',
+                accountName: 'HOANG DINH KHAI',
+                accountNumber: '69999888888866',
                 isDefault: true
             }
         })

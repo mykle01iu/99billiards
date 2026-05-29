@@ -1,25 +1,65 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
 
-interface Service { id: number; name: string; category: string; price: number; stock: number }
+interface Service {
+  id: number
+  name: string
+  category: string
+  price: number
+  stock: number
+}
 
 export default function Services() {
   const [services, setServices] = useState<Service[]>([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: '', category: 'food', price: '', stock: '' })
+  const [saving, setSaving] = useState(false)
 
-  const fetchServices = async () => { const res = await api.get('/services'); setServices(res.data) }
+  async function fetchServices() {
+    try {
+      const res = await api.get('/services')
+      setServices(res.data)
+    } catch (error) {
+      console.error('Lỗi tải dữ liệu:', error)
+    }
+  }
+
   useEffect(() => { fetchServices() }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await api.post('/services', form)
-    setForm({ name: '', category: 'food', price: '', stock: '' })
-    setShowForm(false); fetchServices()
+    if (!form.name || !form.price) {
+      alert('❌ Vui lòng điền đầy đủ thông tin')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.post('/services', {
+        ...form,
+        price: Number(form.price),
+        stock: form.stock ? Number(form.stock) : 0
+      })
+      setForm({ name: '', category: 'food', price: '', stock: '' })
+      setShowForm(false)
+      fetchServices()
+      alert('✅ Thêm dịch vụ thành công!')
+    } catch (error: any) {
+      alert('❌ ' + (error.response?.data?.message || 'Không thể thêm dịch vụ'))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('Xóa dịch vụ này?')) { await api.delete(`/services/${id}`); fetchServices() }
+    if (confirm('Xóa dịch vụ này?')) {
+      try {
+        await api.delete(`/services/${id}`)
+        fetchServices()
+        alert('✅ Xóa dịch vụ thành công!')
+      } catch (error: any) {
+        alert('❌ ' + (error.response?.data?.message || 'Không thể xóa dịch vụ'))
+      }
+    }
   }
 
   const categoryLabel: Record<string, string> = { food: '🍔 Đồ ăn', drink: '🥤 Đồ uống', equipment: '🎱 Dụng cụ' }
@@ -44,7 +84,9 @@ export default function Services() {
             <input placeholder="Giá (VNĐ)" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} className="border rounded-xl px-4 py-2.5 text-sm outline-none" required />
             <input placeholder="Tồn kho" type="number" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} className="border rounded-xl px-4 py-2.5 text-sm outline-none" />
             <div className="col-span-4 flex gap-3">
-              <button type="submit" className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#1a5c2e' }}>Lưu</button>
+              <button type="submit" disabled={saving} className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed" style={{ background: '#1a5c2e' }}>
+                {saving ? 'Đang lưu...' : 'Lưu'}
+              </button>
               <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600">Hủy</button>
             </div>
           </form>

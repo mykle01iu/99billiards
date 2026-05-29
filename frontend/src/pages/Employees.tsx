@@ -8,6 +8,7 @@ export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ fullName: '', phone: '', position: '', baseSalary: '' })
+  const [saving, setSaving] = useState(false)
   const [activeShifts, setActiveShifts] = useState<Record<number, boolean>>({})
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null)
   const [shifts, setShifts] = useState<Shift[]>([])
@@ -28,28 +29,65 @@ export default function Employees() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await api.post('/employees', form)
-    setForm({ fullName: '', phone: '', position: '', baseSalary: '' })
-    setShowForm(false); fetchEmployees()
+    setSaving(true)
+    try {
+      await api.post('/employees', {
+        ...form,
+        baseSalary: form.baseSalary ? Number(form.baseSalary) : 0
+      })
+      setForm({ fullName: '', phone: '', position: '', baseSalary: '' })
+      setShowForm(false)
+      fetchEmployees()
+      alert('✅ Lưu nhân viên thành công!')
+    } catch (error: any) {
+      console.error('Lỗi lưu nhân viên:', error)
+      alert('❌ Lưu thất bại: ' + (error.response?.data?.message || error.message || 'Vui lòng thử lại'))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('Xóa nhân viên này?')) { await api.delete(`/employees/${id}`); fetchEmployees() }
+    if (confirm('Xóa nhân viên này?')) {
+      try {
+        await api.delete(`/employees/${id}`)
+        fetchEmployees()
+        alert('✅ Xóa nhân viên thành công!')
+      } catch (error: any) {
+        alert('❌ ' + (error.response?.data?.message || 'Không thể xóa nhân viên'))
+      }
+    }
   }
 
   const handleClockIn = async (id: number) => {
-    try { await api.post(`/employees/${id}/clock-in`); fetchEmployees() }
-    catch { alert('Nhân viên đang trong ca làm!') }
+    try {
+      await api.post(`/employees/${id}/clock-in`)
+      fetchEmployees()
+      alert('✅ Check in thành công!')
+    } catch (error: any) {
+      alert('❌ ' + (error.response?.data?.message || 'Nhân viên đang trong ca làm!'))
+    }
   }
 
   const handleClockOut = async (id: number) => {
-    try { await api.post(`/employees/${id}/clock-out`); fetchEmployees() }
-    catch { alert('Không có ca làm nào đang mở!') }
+    try {
+      await api.post(`/employees/${id}/clock-out`)
+      fetchEmployees()
+      alert('✅ Check out thành công!')
+    } catch (error: any) {
+      alert('❌ ' + (error.response?.data?.message || 'Không có ca làm nào đang mở!'))
+    }
   }
 
   const viewShifts = async (emp: Employee) => {
-    const res = await api.get(`/employees/${emp.id}/shifts`)
-    setShifts(res.data); setSelectedEmp(emp); setShowShifts(true)
+    try {
+      const res = await api.get(`/employees/${emp.id}/shifts`)
+      setShifts(res.data)
+      setSelectedEmp(emp)
+      setShowShifts(true)
+    } catch (error: any) {
+      alert('❌ Không thể tải lịch sử ca làm')
+    }
   }
 
   const formatTime = (time: string) => new Date(time).toLocaleString('vi-VN')
@@ -77,7 +115,9 @@ export default function Employees() {
             <input placeholder="Chức vụ" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} className="border rounded-xl px-4 py-2.5 text-sm outline-none" required />
             <input placeholder="Lương cơ bản" type="number" value={form.baseSalary} onChange={e => setForm({ ...form, baseSalary: e.target.value })} className="border rounded-xl px-4 py-2.5 text-sm outline-none" />
             <div className="col-span-2 flex gap-3">
-              <button type="submit" className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#1a5c2e' }}>Lưu</button>
+              <button type="submit" disabled={saving} className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed" style={{ background: '#1a5c2e' }}>
+                {saving ? 'Đang lưu...' : 'Lưu'}
+              </button>
               <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600">Hủy</button>
             </div>
           </form>

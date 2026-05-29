@@ -16,6 +16,7 @@ export default function Customers() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: '', phone: '' })
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     fetchCustomers()
@@ -34,6 +35,7 @@ export default function Customers() {
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSaving(true)
     try {
       await api.post('/customers', form)
       setForm({ name: '', phone: '' })
@@ -42,6 +44,8 @@ export default function Customers() {
       alert('✅ Thêm khách hàng thành công!')
     } catch (error: any) {
       alert('❌ ' + (error.response?.data?.error || 'Có lỗi xảy ra'))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -102,10 +106,11 @@ export default function Customers() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex-1 py-2 rounded-xl font-semibold text-sm text-white"
+              disabled={saving}
+              className="flex-1 py-2 rounded-xl font-semibold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: '#1a5c2e' }}
             >
-              Thêm khách
+              {saving ? 'Đang lưu...' : 'Thêm khách'}
             </button>
             <button
               type="button"

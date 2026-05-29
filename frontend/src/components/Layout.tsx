@@ -15,7 +15,7 @@ export default function Layout() {
     <div className="flex h-screen" style={{ background: '#f5f5f0' }}>
       <aside className="w-64 text-white flex flex-col" style={{ background: '#1a5c2e' }}>
         <div className="p-6 flex items-center gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <img src={logo} alt="99Billiards" className="w-12 h-12 rounded-full ring-2" style={{ ringColor: '#f5c518' }} />
+          <img src={logo} alt="99Billiards" className="w-12 h-12 rounded-full" style={{ border: '2px solid #f5c518' }} />
           <div>
             <h1 className="text-lg font-bold text-white">99Billiards</h1>
             <p className="text-xs" style={{ color: '#a3c9ae' }}>Quản lý hệ thống</p>
@@ -32,10 +32,9 @@ export default function Layout() {
           ].map(item => (
             <NavLink key={item.to} to={item.to} end={item.end}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium ${
-                  isActive
-                    ? 'text-white' 
-                    : 'text-green-200 hover:text-white hover:bg-white/10'
+                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium ${isActive
+                  ? 'text-white'
+                  : 'text-green-200 hover:text-white hover:bg-white/10'
                 }`
               }
               style={({ isActive }) => isActive ? { background: '#f5c518', color: '#1a3d1f' } : {}}

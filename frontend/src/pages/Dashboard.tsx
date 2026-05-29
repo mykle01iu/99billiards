@@ -12,7 +12,14 @@ const mockChartData = [
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null)
-  useEffect(() => { api.get('/dashboard/stats').then(res => setStats(res.data)) }, [])
+  useEffect(() => {
+    api.get('/dashboard/stats')
+      .then(res => setStats(res.data))
+      .catch(error => {
+        console.error('Lỗi lấy thống kê:', error)
+        alert('❌ Không thể lấy dữ liệu thống kê: ' + (error.response?.data?.message || error.message))
+      })
+  }, [])
 
   const cards = [
     { icon: '👥', label: 'Nhân viên đang làm', value: stats?.totalEmployees ?? '--', color: '#1a5c2e', bg: '#dcfce7' },
@@ -48,8 +55,8 @@ export default function Dashboard() {
             <BarChart data={mockChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af' }} tickFormatter={v => `${(v/1000000).toFixed(1)}M`} />
-              <Tooltip formatter={(v: number) => [`${v.toLocaleString()}đ`, 'Doanh thu']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af' }} tickFormatter={v => `${(v / 1000000).toFixed(1)}M`} />
+              <Tooltip formatter={(v: any) => [`${(v || 0).toLocaleString()}đ`, 'Doanh thu']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
               <Bar dataKey="revenue" fill="#1a5c2e" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

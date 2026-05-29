@@ -106,6 +106,12 @@ const calculateCRC16 = (payload: string) => {
   return crc.toString(16).toUpperCase().padStart(4, '0')
 }
 
+const DEFAULT_QR_BANK = {
+  bankName: 'MBBank',
+  accountName: 'HOANG DINH KHAI',
+  accountNumber: '69999888888866'
+}
+
 const buildVietQrPayload = (bankName: string, accountNumber: string, accountName: string, amount: number) => {
   const gui = getBankGui(bankName)
   const account = accountNumber.replace(/\s+/g, '')
@@ -137,13 +143,11 @@ export const generateQRCode = async (req: Request, res: Response) => {
   }
 
   try {
-    const defaultBank = await prisma.bankAccount.findFirst({
+    const dbBank = await prisma.bankAccount.findFirst({
       where: { isDefault: true }
     })
 
-    if (!defaultBank) {
-      return res.status(404).json({ error: 'No default bank account configured' })
-    }
+    const defaultBank = dbBank ?? DEFAULT_QR_BANK
 
     const qrData = buildVietQrPayload(
       defaultBank.bankName,

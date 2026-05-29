@@ -37,7 +37,14 @@ export default function Invoices() {
   const formatMoney = (value: number) => value.toLocaleString('vi-VN') + 'đ'
   const formatDate = (value: string) => new Date(value).toLocaleString('vi-VN', { hour12: false })
 
-  useEffect(() => { api.get('/invoices').then(res => setInvoices(res.data)) }, [])
+  useEffect(() => {
+    api.get('/invoices')
+      .then(res => setInvoices(res.data))
+      .catch(error => {
+        console.error('Lỗi lấy hóa đơn:', error)
+        alert('❌ Không thể lấy hóa đơn: ' + (error.response?.data?.message || error.message))
+      })
+  }, [])
 
   return (
     <div className="p-8 space-y-6">
@@ -134,7 +141,7 @@ export default function Invoices() {
                   <p className="text-sm text-gray-700 mt-2">Hẹn gặp lại lần sau. Chúc quý khách có buổi chơi thật vui.</p>
                 </div>
               </div>
-          </div>
+            </div>
           ) : (
             <div className="h-full flex items-center justify-center text-gray-400">
               <div className="text-center"><div className="text-5xl mb-3">🧾</div><p className="text-sm">Chọn hóa đơn để xem chi tiết</p></div>
