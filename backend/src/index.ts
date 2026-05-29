@@ -14,7 +14,6 @@ import customerRoutes from './routes/customerRoutes'
 import promotionRoutes from './routes/promotionRoutes'
 import reportRoutes from './routes/reportRoutes'
 
-
 dotenv.config()
 
 const prisma = new PrismaClient()
@@ -50,7 +49,10 @@ async function seedDefaultUsers() {
     }
 }
 
-app.use(cors())
+app.use(cors({
+    origin: ['https://99billiards.vercel.app', 'http://localhost:5173'],
+    credentials: true
+}))
 app.use(express.json())
 
 app.use('/api/auth', authRoutes)
